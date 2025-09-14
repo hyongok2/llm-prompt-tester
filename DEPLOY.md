@@ -54,21 +54,20 @@ docker rm promptlab-app
 2. "Ollama 서버 URL" 설정:
    - **로컬 Ollama**: `http://localhost:11434`
    - **원격 Ollama**: `http://your-server-ip:11434`
-   - **Docker 내 Ollama**: `http://host.docker.internal:11434`
 
-### Docker 내에서 로컬 Ollama 접근
+**중요**: 브라우저에서 직접 Ollama API를 호출하므로, 사용자의 브라우저가 Ollama 서버에 접근할 수 있어야 합니다.
 
-Windows/Mac에서 Docker 컨테이너가 호스트의 Ollama에 접근하려면:
+### CORS 설정 (필요한 경우)
+
+Ollama가 다른 도메인에서의 요청을 허용하도록 설정:
 
 ```bash
-# docker-compose.yml에 추가
-services:
-  promptlab:
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+# Ollama 환경변수 설정
+export OLLAMA_ORIGINS="*"
+ollama serve
 ```
 
-그리고 앱에서 서버 URL을 `http://host.docker.internal:11434`로 설정
+또는 Ollama 설정 파일에서 CORS를 허용하세요.
 
 ## 📊 모니터링
 
