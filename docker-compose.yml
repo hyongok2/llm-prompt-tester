@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: promptlab:v1.0.0
+    image: promptlab:v1.0.1
     container_name: promptlab-app
     ports:
       - "5300:80"
