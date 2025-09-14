@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  promptlab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: promptlab:v1.0.0
+    container_name: promptlab-app
+    ports:
+      - "5300:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    networks:
+      - promptlab-network
+    labels:
+      - "com.promptlab.description=PromptLab - Advanced AI Testing Studio"
+      - "com.promptlab.version=1.0.0"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  promptlab-network:
+    driver: bridge
+    name: promptlab-network

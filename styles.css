@@ -611,6 +611,28 @@ button {
     background: #a8a8a8;
 }
 
+/* 다크 테마 스크롤바 */
+[data-theme="dark"] .response-container::-webkit-scrollbar-track,
+[data-theme="dark"] .modal-body::-webkit-scrollbar-track,
+[data-theme="dark"] .template-list::-webkit-scrollbar-track,
+[data-theme="dark"] .history-list::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+[data-theme="dark"] .response-container::-webkit-scrollbar-thumb,
+[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb,
+[data-theme="dark"] .template-list::-webkit-scrollbar-thumb,
+[data-theme="dark"] .history-list::-webkit-scrollbar-thumb {
+    background: #4b5563;
+}
+
+[data-theme="dark"] .response-container::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .template-list::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .history-list::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
 /* 로딩 애니메이션 */
 .loading-dots::after {
     content: '';
@@ -768,6 +790,36 @@ button {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+}
+
+/* 다크 테마 모달 개선 */
+[data-theme="dark"] .modal-footer {
+    background: #111827;
+    border-top: 1px solid #374151;
+}
+
+[data-theme="dark"] .setting-group label {
+    color: #d1d5db;
+}
+
+[data-theme="dark"] .setting-group small {
+    color: #9ca3af;
+}
+
+[data-theme="dark"] .token-preset {
+    background: #1f2937 !important;
+    color: #d1d5db !important;
+    border-color: #374151 !important;
+}
+
+[data-theme="dark"] .token-preset:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .token-preset.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: white !important;
 }
 
 

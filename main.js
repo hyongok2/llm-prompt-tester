@@ -1107,10 +1107,10 @@ ${session.response}
                 ${template.tags.length > 0 ? `<div class="template-tags">${template.tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')}</div>` : ''}
                 <div class="prompt-preview">${this.escapeHtml(template.prompt.substring(0, 200))}${template.prompt.length > 200 ? '...' : ''}</div>
                 <div class="template-actions">
-                    <button class="action-btn" onclick="app.toggleTemplateFavorite('${template.id}')">
+                    <button class="action-btn favorite-btn" data-template-id="${template.id}">
                         ${template.favorite ? '★' : '☆'}
                     </button>
-                    <button class="action-btn danger" onclick="app.deleteTemplate('${template.id}')">🗑️</button>
+                    <button class="action-btn danger delete-btn" data-template-id="${template.id}">🗑️</button>
                 </div>
             </div>
         `).join('');
@@ -1124,6 +1124,23 @@ ${session.response}
                     const templateId = item.dataset.id;
                     this.loadTemplateById(templateId);
                 }
+            });
+        });
+
+        // 템플릿 액션 버튼 이벤트
+        this.templateList.querySelectorAll('.favorite-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const templateId = btn.dataset.templateId;
+                this.toggleTemplateFavorite(templateId);
+            });
+        });
+
+        this.templateList.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const templateId = btn.dataset.templateId;
+                this.deleteTemplate(templateId);
             });
         });
     }
@@ -1192,14 +1209,39 @@ ${session.response}
                 </div>
                 <div class="prompt-preview">${this.escapeHtml(this.truncateText(item.prompt, 200))}</div>
                 <div class="history-actions">
-                    <button class="action-btn" onclick="app.loadHistoryItem('${item.id}')">📝</button>
-                    <button class="action-btn" onclick="app.exportHistoryItem('${item.id}')">💾</button>
-                    <button class="action-btn danger" onclick="app.deleteHistoryItem('${item.id}')">🗑️</button>
+                    <button class="action-btn load-btn" data-history-id="${item.id}">📝</button>
+                    <button class="action-btn export-btn" data-history-id="${item.id}">💾</button>
+                    <button class="action-btn danger delete-history-btn" data-history-id="${item.id}">🗑️</button>
                 </div>
             </div>
         `).join('');
 
         this.historyList.innerHTML = html;
+
+        // 히스토리 액션 버튼 이벤트
+        this.historyList.querySelectorAll('.load-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const historyId = btn.dataset.historyId;
+                this.loadHistoryItem(historyId);
+            });
+        });
+
+        this.historyList.querySelectorAll('.export-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const historyId = btn.dataset.historyId;
+                this.exportHistoryItem(historyId);
+            });
+        });
+
+        this.historyList.querySelectorAll('.delete-history-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const historyId = btn.dataset.historyId;
+                this.deleteHistoryItem(historyId);
+            });
+        });
     }
 
     loadHistoryItem(historyId) {
