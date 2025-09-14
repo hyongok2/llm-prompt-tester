@@ -5,7 +5,8 @@ class ConfigManager {
             serverUrl: 'http://localhost:11434',
             temperature: 0.7,
             maxTokens: 32768,
-            autoSave: true
+            autoSave: true,
+            filePrefix: 'PromptLab'
         };
         this.config = this.loadConfig();
     }
@@ -58,6 +59,14 @@ class AdvancedOllamaPromptTester {
         this.currentController = null;
         this.startTime = null;
         this.tokenCount = 0;
+        this.currentSession = {
+            prompt: '',
+            response: '',
+            model: '',
+            settings: {},
+            metrics: {},
+            timestamp: null
+        };
 
         this.initializeElements();
         this.bindEvents();
@@ -76,6 +85,7 @@ class AdvancedOllamaPromptTester {
         this.modalServerUrl = document.getElementById('modalServerUrl');
         this.maxTokensInput = document.getElementById('maxTokens');
         this.autoSaveCheckbox = document.getElementById('autoSave');
+        this.filePrefixInput = document.getElementById('filePrefix');
         this.saveSettingsBtn = document.getElementById('saveSettings');
         this.resetSettingsBtn = document.getElementById('resetSettings');
         this.closeSettingsBtn = document.getElementById('closeSettings');
@@ -93,6 +103,7 @@ class AdvancedOllamaPromptTester {
         this.responseContainer = document.getElementById('responseContainer');
         this.responseActions = document.querySelector('.response-actions');
         this.copyBtn = document.getElementById('copyResponse');
+        this.saveSessionBtn = document.getElementById('saveSession');
         this.clearResponseBtn = document.getElementById('clearResponse');
 
         // Stats elements
@@ -153,6 +164,7 @@ class AdvancedOllamaPromptTester {
         this.clearPromptBtn.addEventListener('click', () => this.clearPrompt());
         this.stopBtn.addEventListener('click', () => this.stopGeneration());
         this.copyBtn.addEventListener('click', () => this.copyResponse());
+        this.saveSessionBtn.addEventListener('click', () => this.saveSession());
         this.clearResponseBtn.addEventListener('click', () => this.clearResponse());
 
         // Keyboard shortcuts
@@ -219,6 +231,7 @@ class AdvancedOllamaPromptTester {
         this.modalServerUrl.value = this.config.get('serverUrl');
         this.maxTokensInput.value = this.config.get('maxTokens');
         this.autoSaveCheckbox.checked = this.config.get('autoSave');
+        this.filePrefixInput.value = this.config.get('filePrefix');
         this.updateTokenPresetActive(this.config.get('maxTokens'));
         this.settingsModal.style.display = 'flex';
     }
@@ -240,7 +253,8 @@ class AdvancedOllamaPromptTester {
         const newConfig = {
             serverUrl: this.modalServerUrl.value.trim(),
             maxTokens: parseInt(this.maxTokensInput.value),
-            autoSave: this.autoSaveCheckbox.checked
+            autoSave: this.autoSaveCheckbox.checked,
+            filePrefix: this.filePrefixInput.value.trim() || 'PromptLab'
         };
 
         // Validate URL
@@ -399,6 +413,20 @@ class AdvancedOllamaPromptTester {
         this.stopBtn.style.display = 'inline-flex';
         this.sendBtn.style.display = 'none';
 
+        // Initialize current session
+        this.currentSession = {
+            prompt: this.promptInput.value.trim(),
+            response: '',
+            model: this.modelSelect.value,
+            settings: {
+                serverUrl: this.config.get('serverUrl'),
+                temperature: this.config.get('temperature'),
+                maxTokens: this.config.get('maxTokens')
+            },
+            metrics: {},
+            timestamp: new Date().toISOString()
+        };
+
         this.clearResponse(false);
         this.responseContainer.innerHTML = '<span class="streaming-cursor"></span>';
         this.responseActions.style.display = 'none';
@@ -424,10 +452,21 @@ class AdvancedOllamaPromptTester {
         this.responseTimeSpan.textContent = `${elapsed}ms`;
         this.generationTimeSpan.textContent = `${elapsed}ms`;
 
+        let tokensPerSecond = 0;
         if (this.tokenCount > 0 && elapsed > 0) {
-            const tokensPerSecond = Math.round((this.tokenCount / elapsed) * 1000 * 100) / 100;
+            tokensPerSecond = Math.round((this.tokenCount / elapsed) * 1000 * 100) / 100;
             this.tokensPerSecondSpan.textContent = `${tokensPerSecond} tokens/s`;
         }
+
+        // Update session metrics
+        this.currentSession.response = this.responseContainer.textContent || '';
+        this.currentSession.metrics = {
+            responseTime: elapsed,
+            tokenCount: this.tokenCount,
+            tokensPerSecond: tokensPerSecond,
+            characterCount: this.currentSession.prompt.length,
+            responseLength: this.currentSession.response.length
+        };
 
         this.updateStatus('complete', '완료');
         this.responseActions.style.display = 'flex';
@@ -540,6 +579,90 @@ class AdvancedOllamaPromptTester {
                 this.showToast('복사에 실패했습니다', 'error');
             }
         }
+    }
+
+    saveSession() {
+        if (!this.currentSession.response || this.currentSession.response === '프롬프트를 입력하고 전송 버튼을 눌러주세요.') {
+            this.showToast('저장할 응답이 없습니다', 'warning');
+            return;
+        }
+
+        try {
+            const sessionData = this.generateSessionData();
+            const fileName = this.generateFileName();
+            this.downloadFile(sessionData, fileName);
+            this.showToast('세션이 저장되었습니다', 'success');
+        } catch (error) {
+            console.error('세션 저장 실패:', error);
+            this.showToast('세션 저장에 실패했습니다', 'error');
+        }
+    }
+
+    generateFileName() {
+        const now = new Date();
+        const timestamp = now.toISOString().slice(0, 19).replace(/[:-]/g, '').replace('T', '_');
+        const modelName = this.currentSession.model.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+        const promptPreview = this.currentSession.prompt
+            .replace(/[^a-zA-Z0-9가-힣\s]/g, '')
+            .substring(0, 30)
+            .replace(/\s+/g, '_');
+
+        const prefix = this.config.get('filePrefix') || 'PromptLab';
+        return `${prefix}_${timestamp}_${modelName}_${promptPreview}.md`;
+    }
+
+    generateSessionData() {
+        const session = this.currentSession;
+        const date = new Date(session.timestamp);
+
+        return `# PromptLab Session Report
+
+## 📋 Session Information
+- **Date**: ${date.toLocaleDateString('ko-KR')} ${date.toLocaleTimeString('ko-KR')}
+- **Model**: ${session.model}
+- **Server**: ${session.settings.serverUrl}
+
+## ⚙️ Settings
+- **Temperature**: ${session.settings.temperature}
+- **Max Tokens**: ${session.settings.maxTokens.toLocaleString()}
+
+## 📝 Prompt
+\`\`\`
+${session.prompt}
+\`\`\`
+
+## 🤖 Response
+\`\`\`
+${session.response}
+\`\`\`
+
+## 📊 Performance Metrics
+- **Response Time**: ${session.metrics.responseTime}ms
+- **Token Count**: ${session.metrics.tokenCount.toLocaleString()}
+- **Tokens/Second**: ${session.metrics.tokensPerSecond}
+- **Prompt Length**: ${session.metrics.characterCount.toLocaleString()} characters
+- **Response Length**: ${session.metrics.responseLength.toLocaleString()} characters
+
+---
+*Generated by PromptLab - AI Testing Studio*
+*Timestamp: ${session.timestamp}*
+`;
+    }
+
+    downloadFile(content, fileName) {
+        const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        URL.revokeObjectURL(url);
     }
 
     updateStatus(type, message) {
