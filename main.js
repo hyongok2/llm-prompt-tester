@@ -1,3 +1,160 @@
+// Template and History Manager
+class TemplateHistoryManager {
+    constructor() {
+        this.templates = this.loadTemplates();
+        this.history = this.loadHistory();
+    }
+
+    // 템플릿 관리
+    loadTemplates() {
+        try {
+            const saved = localStorage.getItem('llm-prompt-templates');
+            return saved ? JSON.parse(saved) : [];
+        } catch (error) {
+            console.warn('Failed to load templates:', error);
+            return [];
+        }
+    }
+
+    saveTemplates() {
+        try {
+            localStorage.setItem('llm-prompt-templates', JSON.stringify(this.templates));
+        } catch (error) {
+            console.error('Failed to save templates:', error);
+        }
+    }
+
+    saveTemplate(templateData) {
+        const template = {
+            id: Date.now().toString(),
+            name: templateData.name,
+            description: templateData.description || '',
+            prompt: templateData.prompt,
+            tags: templateData.tags ? templateData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+            favorite: templateData.favorite || false,
+            createdAt: new Date().toISOString(),
+            lastUsed: new Date().toISOString(),
+            usageCount: 0
+        };
+
+        this.templates.unshift(template);
+        this.saveTemplates();
+        return template;
+    }
+
+    updateTemplate(id, updates) {
+        const index = this.templates.findIndex(t => t.id === id);
+        if (index !== -1) {
+            this.templates[index] = { ...this.templates[index], ...updates };
+            this.saveTemplates();
+        }
+    }
+
+    deleteTemplate(id) {
+        this.templates = this.templates.filter(t => t.id !== id);
+        this.saveTemplates();
+    }
+
+    getTemplates(filter = 'all', searchTerm = '') {
+        let filtered = this.templates;
+
+        // 필터 적용
+        if (filter === 'favorites') {
+            filtered = filtered.filter(t => t.favorite);
+        } else if (filter === 'recent') {
+            filtered = filtered.sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed)).slice(0, 10);
+        }
+
+        // 검색 적용
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter(t =>
+                t.name.toLowerCase().includes(term) ||
+                t.description.toLowerCase().includes(term) ||
+                t.tags.some(tag => tag.toLowerCase().includes(term)) ||
+                t.prompt.toLowerCase().includes(term)
+            );
+        }
+
+        return filtered;
+    }
+
+    useTemplate(id) {
+        const template = this.templates.find(t => t.id === id);
+        if (template) {
+            template.lastUsed = new Date().toISOString();
+            template.usageCount = (template.usageCount || 0) + 1;
+            this.saveTemplates();
+            return template;
+        }
+        return null;
+    }
+
+    // 히스토리 관리
+    loadHistory() {
+        try {
+            const saved = localStorage.getItem('llm-prompt-history');
+            return saved ? JSON.parse(saved) : [];
+        } catch (error) {
+            console.warn('Failed to load history:', error);
+            return [];
+        }
+    }
+
+    saveHistory() {
+        try {
+            // 최대 100개만 저장 (용량 관리)
+            const historyToSave = this.history.slice(0, 100);
+            localStorage.setItem('llm-prompt-history', JSON.stringify(historyToSave));
+        } catch (error) {
+            console.error('Failed to save history:', error);
+        }
+    }
+
+    addHistory(historyData) {
+        const historyItem = {
+            id: Date.now().toString(),
+            prompt: historyData.prompt,
+            response: historyData.response,
+            model: historyData.model,
+            settings: historyData.settings,
+            timestamp: new Date().toISOString(),
+            responseTime: historyData.responseTime,
+            tokenCount: historyData.tokenCount,
+            tokensPerSecond: historyData.tokensPerSecond
+        };
+
+        this.history.unshift(historyItem);
+        this.saveHistory();
+        return historyItem;
+    }
+
+    getHistory(searchTerm = '') {
+        let filtered = this.history;
+
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter(h =>
+                h.prompt.toLowerCase().includes(term) ||
+                h.model.toLowerCase().includes(term) ||
+                (h.response && h.response.toLowerCase().includes(term))
+            );
+        }
+
+        return filtered;
+    }
+
+    deleteHistory(id) {
+        this.history = this.history.filter(h => h.id !== id);
+        this.saveHistory();
+    }
+
+    clearHistory() {
+        this.history = [];
+        this.saveHistory();
+    }
+}
+
 // Configuration and Storage Manager
 class ConfigManager {
     constructor() {
@@ -57,6 +214,7 @@ class ConfigManager {
 class AdvancedOllamaPromptTester {
     constructor() {
         this.config = new ConfigManager();
+        this.templateHistory = new TemplateHistoryManager();
         this.currentController = null;
         this.startTime = null;
         this.tokenCount = 0;
@@ -110,6 +268,37 @@ class AdvancedOllamaPromptTester {
         // Theme toggle
         this.themeToggle = document.getElementById('themeToggle');
         this.themeIcon = document.querySelector('.theme-icon');
+
+        // Template and History elements
+        this.saveTemplateBtn = document.getElementById('saveTemplate');
+        this.loadTemplateBtn = document.getElementById('loadTemplate');
+        this.historyBtn = document.getElementById('historyBtn');
+
+        // Template modal elements
+        this.templateModal = document.getElementById('templateModal');
+        this.templateNameInput = document.getElementById('templateName');
+        this.templateDescriptionInput = document.getElementById('templateDescription');
+        this.templateTagsInput = document.getElementById('templateTags');
+        this.templateFavoriteCheckbox = document.getElementById('templateFavorite');
+        this.saveTemplateConfirmBtn = document.getElementById('saveTemplateConfirm');
+        this.closeTemplateModalBtn = document.getElementById('closeTemplateModal');
+        this.cancelTemplateBtn = document.getElementById('cancelTemplate');
+
+        // Load template modal elements
+        this.loadTemplateModal = document.getElementById('loadTemplateModal');
+        this.templateSearch = document.getElementById('templateSearch');
+        this.templateList = document.getElementById('templateList');
+        this.closeLoadTemplateModalBtn = document.getElementById('closeLoadTemplateModal');
+        this.cancelLoadTemplateBtn = document.getElementById('cancelLoadTemplate');
+
+        // History modal elements
+        this.historyModal = document.getElementById('historyModal');
+        this.historySearch = document.getElementById('historySearch');
+        this.historyList = document.getElementById('historyList');
+        this.historyCount = document.getElementById('historyCount');
+        this.clearHistoryBtn = document.getElementById('clearHistory');
+        this.closeHistoryModalBtn = document.getElementById('closeHistoryModal');
+        this.cancelHistoryBtn = document.getElementById('cancelHistory');
 
         // Stats elements
         this.responseTimeSpan = document.getElementById('responseTime');
@@ -174,6 +363,57 @@ class AdvancedOllamaPromptTester {
 
         // Theme toggle
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
+
+        // Template and History events
+        this.saveTemplateBtn.addEventListener('click', () => this.openSaveTemplate());
+        this.loadTemplateBtn.addEventListener('click', () => this.openLoadTemplate());
+        this.historyBtn.addEventListener('click', () => this.openHistory());
+
+        // Template modal events
+        this.saveTemplateConfirmBtn.addEventListener('click', () => this.saveTemplate());
+        this.closeTemplateModalBtn.addEventListener('click', () => closeModal('templateModal'));
+        this.cancelTemplateBtn.addEventListener('click', () => closeModal('templateModal'));
+
+        // Load template modal events
+        this.templateSearch.addEventListener('input', () => this.filterTemplates());
+        this.closeLoadTemplateModalBtn.addEventListener('click', () => closeModal('loadTemplateModal'));
+        this.cancelLoadTemplateBtn.addEventListener('click', () => closeModal('loadTemplateModal'));
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                this.filterTemplates();
+            });
+        });
+
+        // History modal events
+        this.historySearch.addEventListener('input', () => this.filterHistory());
+        this.clearHistoryBtn.addEventListener('click', () => this.clearAllHistory());
+        this.closeHistoryModalBtn.addEventListener('click', () => closeModal('historyModal'));
+        this.cancelHistoryBtn.addEventListener('click', () => closeModal('historyModal'));
+
+        // Modal backdrop and ESC key events
+        this.templateModal.addEventListener('click', (e) => {
+            if (e.target === this.templateModal) closeModal('templateModal');
+        });
+
+        this.loadTemplateModal.addEventListener('click', (e) => {
+            if (e.target === this.loadTemplateModal) closeModal('loadTemplateModal');
+        });
+
+        this.historyModal.addEventListener('click', (e) => {
+            if (e.target === this.historyModal) closeModal('historyModal');
+        });
+
+        // ESC key to close modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (this.templateModal.style.display === 'flex') closeModal('templateModal');
+                if (this.loadTemplateModal.style.display === 'flex') closeModal('loadTemplateModal');
+                if (this.historyModal.style.display === 'flex') closeModal('historyModal');
+                if (this.settingsModal.style.display === 'flex') this.closeSettings();
+            }
+        });
 
         // Keyboard shortcuts
         this.promptInput.addEventListener('keydown', (e) => {
@@ -479,6 +719,19 @@ class AdvancedOllamaPromptTester {
             responseLength: this.currentSession.response.length
         };
 
+        // 성공적으로 완료된 경우에만 히스토리에 저장
+        if (this.currentSession.response && this.currentSession.response.trim()) {
+            this.templateHistory.addHistory({
+                prompt: this.currentSession.prompt,
+                response: this.currentSession.response,
+                model: this.currentSession.model,
+                settings: this.currentSession.settings,
+                responseTime: elapsed,
+                tokenCount: this.tokenCount,
+                tokensPerSecond: tokensPerSecond
+            });
+        }
+
         this.updateStatus('complete', '완료');
         this.responseActions.style.display = 'flex';
     }
@@ -764,7 +1017,314 @@ ${session.response}
             }, 300);
         }, 3000);
     }
+
+    // 템플릿 관리 메서드들
+    openSaveTemplate() {
+        const currentPrompt = this.promptInput.value.trim();
+        if (!currentPrompt) {
+            this.showToast('저장할 프롬프트를 먼저 입력해주세요.', 'warning');
+            return;
+        }
+
+        // 입력 필드 초기화
+        this.templateNameInput.value = '';
+        this.templateDescriptionInput.value = '';
+        this.templateTagsInput.value = '';
+        this.templateFavoriteCheckbox.checked = false;
+
+        this.templateModal.style.display = 'flex';
+        setTimeout(() => this.templateNameInput.focus(), 100);
+    }
+
+    saveTemplate() {
+        const name = this.templateNameInput.value.trim();
+        const description = this.templateDescriptionInput.value.trim();
+        const tags = this.templateTagsInput.value.trim();
+        const favorite = this.templateFavoriteCheckbox.checked;
+        const prompt = this.promptInput.value.trim();
+
+        if (!name) {
+            this.showToast('템플릿 이름을 입력해주세요.', 'warning');
+            this.templateNameInput.focus();
+            return;
+        }
+
+        if (!prompt) {
+            this.showToast('저장할 프롬프트가 없습니다.', 'warning');
+            return;
+        }
+
+        // 중복 이름 검사
+        const existingTemplate = this.templateHistory.templates.find(t => t.name === name);
+        if (existingTemplate) {
+            if (!confirm('같은 이름의 템플릿이 존재합니다. 덮어쓰시겠습니까?')) {
+                return;
+            }
+            this.templateHistory.deleteTemplate(existingTemplate.id);
+        }
+
+        const template = this.templateHistory.saveTemplate({
+            name,
+            description,
+            tags,
+            favorite,
+            prompt
+        });
+
+        this.showToast(`템플릿 "${name}"이 저장되었습니다.`, 'success');
+        closeModal('templateModal');
+    }
+
+    openLoadTemplate() {
+        this.loadTemplateModal.style.display = 'flex';
+        this.filterTemplates();
+        setTimeout(() => this.templateSearch.focus(), 100);
+    }
+
+    filterTemplates() {
+        const searchTerm = this.templateSearch.value.trim();
+        const activeFilter = document.querySelector('.filter-tab.active').dataset.filter;
+        const templates = this.templateHistory.getTemplates(activeFilter, searchTerm);
+        this.renderTemplateList(templates);
+    }
+
+    renderTemplateList(templates) {
+        if (templates.length === 0) {
+            this.templateList.innerHTML = '<div class="no-templates">조건에 맞는 템플릿이 없습니다</div>';
+            return;
+        }
+
+        const html = templates.map(template => `
+            <div class="template-item" data-id="${template.id}">
+                <div class="template-header">
+                    <div class="template-name">${this.escapeHtml(template.name)}${template.favorite ? ' <span class="favorite-star">★</span>' : ''}</div>
+                </div>
+                ${template.description ? `<div class="template-description">${this.escapeHtml(template.description)}</div>` : ''}
+                <div class="template-meta">
+                    <span>생성: ${this.formatDate(template.createdAt)}</span>
+                    <span>사용횟수: ${template.usageCount || 0}</span>
+                </div>
+                ${template.tags.length > 0 ? `<div class="template-tags">${template.tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+                <div class="prompt-preview">${this.escapeHtml(template.prompt.substring(0, 200))}${template.prompt.length > 200 ? '...' : ''}</div>
+                <div class="template-actions">
+                    <button class="action-btn" onclick="app.toggleTemplateFavorite('${template.id}')">
+                        ${template.favorite ? '★' : '☆'}
+                    </button>
+                    <button class="action-btn danger" onclick="app.deleteTemplate('${template.id}')">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+
+        this.templateList.innerHTML = html;
+
+        // 템플릿 아이템 클릭 이벤트
+        this.templateList.querySelectorAll('.template-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('action-btn')) {
+                    const templateId = item.dataset.id;
+                    this.loadTemplateById(templateId);
+                }
+            });
+        });
+    }
+
+    loadTemplateById(templateId) {
+        const template = this.templateHistory.useTemplate(templateId);
+        if (template) {
+            this.promptInput.value = template.prompt;
+            this.promptInput.dispatchEvent(new Event('input'));
+            this.showToast(`템플릿 "${template.name}"을 불러왔습니다.`, 'success');
+            closeModal('loadTemplateModal');
+        }
+    }
+
+    toggleTemplateFavorite(templateId) {
+        const template = this.templateHistory.templates.find(t => t.id === templateId);
+        if (template) {
+            template.favorite = !template.favorite;
+            this.templateHistory.saveTemplates();
+            this.filterTemplates();
+        }
+    }
+
+    deleteTemplate(templateId) {
+        const template = this.templateHistory.templates.find(t => t.id === templateId);
+        if (template && confirm(`템플릿 "${template.name}"을 삭제하시겠습니까?`)) {
+            this.templateHistory.deleteTemplate(templateId);
+            this.filterTemplates();
+            this.showToast('템플릿이 삭제되었습니다.', 'success');
+        }
+    }
+
+    // 히스토리 관리 메서드들
+    openHistory() {
+        this.historyModal.style.display = 'flex';
+        this.updateHistoryCount();
+        this.filterHistory();
+        setTimeout(() => this.historySearch.focus(), 100);
+    }
+
+    filterHistory() {
+        const searchTerm = this.historySearch.value.trim();
+        const history = this.templateHistory.getHistory(searchTerm);
+        this.renderHistoryList(history);
+    }
+
+    renderHistoryList(history) {
+        if (history.length === 0) {
+            this.historyList.innerHTML = '<div class="no-history">조건에 맞는 히스토리가 없습니다</div>';
+            return;
+        }
+
+        const html = history.map(item => `
+            <div class="history-item" data-id="${item.id}">
+                <div class="history-header">
+                    <div class="history-prompt">${this.escapeHtml(this.truncateText(item.prompt, 80))}</div>
+                </div>
+                <div class="history-meta">
+                    <span>${this.formatDate(item.timestamp)}</span>
+                </div>
+                <div class="history-details">
+                    <span class="history-model">${this.escapeHtml(item.model)}</span>
+                    <span class="history-timing">${item.responseTime}ms</span>
+                    <span class="tag">${item.tokenCount} tokens</span>
+                    ${item.tokensPerSecond ? `<span class="tag">${item.tokensPerSecond} t/s</span>` : ''}
+                </div>
+                <div class="prompt-preview">${this.escapeHtml(this.truncateText(item.prompt, 200))}</div>
+                <div class="history-actions">
+                    <button class="action-btn" onclick="app.loadHistoryItem('${item.id}')">📝</button>
+                    <button class="action-btn" onclick="app.exportHistoryItem('${item.id}')">💾</button>
+                    <button class="action-btn danger" onclick="app.deleteHistoryItem('${item.id}')">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+
+        this.historyList.innerHTML = html;
+    }
+
+    loadHistoryItem(historyId) {
+        const item = this.templateHistory.history.find(h => h.id === historyId);
+        if (item) {
+            this.promptInput.value = item.prompt;
+            this.promptInput.dispatchEvent(new Event('input'));
+
+            // 설정도 복원
+            if (item.settings && item.settings.temperature !== undefined) {
+                this.temperatureSlider.value = item.settings.temperature;
+                this.tempValue.textContent = item.settings.temperature;
+            }
+
+            this.showToast('히스토리에서 프롬프트를 불러왔습니다.', 'success');
+            closeModal('historyModal');
+        }
+    }
+
+    exportHistoryItem(historyId) {
+        const item = this.templateHistory.history.find(h => h.id === historyId);
+        if (item) {
+            const content = this.generateMarkdownContent(item);
+            this.downloadFile(content, `History_${this.formatDateForFilename(item.timestamp)}.md`);
+        }
+    }
+
+    deleteHistoryItem(historyId) {
+        if (confirm('이 히스토리 항목을 삭제하시겠습니까?')) {
+            this.templateHistory.deleteHistory(historyId);
+            this.filterHistory();
+            this.updateHistoryCount();
+            this.showToast('히스토리 항목이 삭제되었습니다.', 'success');
+        }
+    }
+
+    clearAllHistory() {
+        if (confirm('모든 히스토리를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+            this.templateHistory.clearHistory();
+            this.filterHistory();
+            this.updateHistoryCount();
+            this.showToast('모든 히스토리가 삭제되었습니다.', 'success');
+        }
+    }
+
+    updateHistoryCount() {
+        const count = this.templateHistory.history.length;
+        this.historyCount.textContent = `총 ${count}개의 테스트`;
+    }
+
+    // 유틸리티 메서드들
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    truncateText(text, maxLength) {
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    }
+
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    formatDateForFilename(dateString) {
+        const date = new Date(dateString);
+        return date.toISOString().slice(0, 19).replace(/[T:]/g, '_').replace(/[-]/g, '');
+    }
+
+    generateMarkdownContent(item) {
+        return `# PromptLab 테스트 히스토리
+
+## 기본 정보
+- **날짜**: ${this.formatDate(item.timestamp)}
+- **모델**: ${item.model}
+- **응답 시간**: ${item.responseTime}ms
+- **토큰 수**: ${item.tokenCount}
+- **속도**: ${item.tokensPerSecond || 'N/A'} tokens/s
+
+## 설정
+- **Temperature**: ${item.settings?.temperature || 'N/A'}
+- **서버**: ${item.settings?.serverUrl || 'N/A'}
+
+## 프롬프트
+\`\`\`
+${item.prompt}
+\`\`\`
+
+## 응답
+\`\`\`
+${item.response}
+\`\`\`
+
+---
+*Generated by PromptLab - AI Testing Studio*`;
+    }
+
+    downloadFile(content, filename) {
+        const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
 }
+
+// Global utility functions - 페이지 로드 전에 정의
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Global app instance for template/history button callbacks
+let app;
 
 // Example prompts for context menu
 const examplePrompts = {
@@ -877,6 +1437,6 @@ function showExampleMenu(x, y) {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new AdvancedOllamaPromptTester();
+    app = new AdvancedOllamaPromptTester();
     initializeContextMenu();
 });

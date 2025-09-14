@@ -90,6 +90,100 @@
             </div>
         </div>
 
+        <!-- 템플릿 저장 모달 -->
+        <div id="templateModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>프롬프트 템플릿 저장</h3>
+                    <button class="close-btn" id="closeTemplateModal">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <label for="templateName">템플릿 이름:</label>
+                        <input type="text" id="templateName" placeholder="예: 코딩 어시스턴트, 번역기, QA 봇" maxlength="50">
+                        <small>쉽게 찾을 수 있는 이름을 입력하세요</small>
+                    </div>
+                    <div class="setting-group">
+                        <label for="templateDescription">설명 (선택사항):</label>
+                        <input type="text" id="templateDescription" placeholder="이 템플릿의 용도나 특징을 설명하세요" maxlength="100">
+                        <small>템플릿의 목적이나 사용법을 간단히 설명하세요</small>
+                    </div>
+                    <div class="setting-group">
+                        <label for="templateTags">태그 (선택사항):</label>
+                        <input type="text" id="templateTags" placeholder="예: 코딩, 번역, 분석 (쉼표로 구분)" maxlength="100">
+                        <small>쉼표로 구분하여 여러 태그를 입력할 수 있습니다</small>
+                    </div>
+                    <div class="setting-group">
+                        <label>
+                            <input type="checkbox" id="templateFavorite"> 즐겨찾기 추가
+                        </label>
+                        <small>자주 사용하는 템플릿은 즐겨찾기로 설정하세요</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="saveTemplateConfirm" class="primary-btn">저장</button>
+                    <button id="cancelTemplate" class="secondary-btn">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 템플릿 불러오기 모달 -->
+        <div id="loadTemplateModal" class="modal" style="display: none;">
+            <div class="modal-content template-load-modal">
+                <div class="modal-header">
+                    <h3>프롬프트 템플릿 불러오기</h3>
+                    <button class="close-btn" id="closeLoadTemplateModal">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="template-controls">
+                        <div class="search-box">
+                            <input type="text" id="templateSearch" placeholder="템플릿 이름, 설명, 태그로 검색...">
+                            <span class="search-icon">🔍</span>
+                        </div>
+                        <div class="filter-tabs">
+                            <button class="filter-tab active" data-filter="all">전체</button>
+                            <button class="filter-tab" data-filter="favorites">즐겨찾기</button>
+                            <button class="filter-tab" data-filter="recent">최근</button>
+                        </div>
+                    </div>
+                    <div id="templateList" class="template-list">
+                        <div class="no-templates">저장된 템플릿이 없습니다</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancelLoadTemplate" class="secondary-btn">닫기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 히스토리 모달 -->
+        <div id="historyModal" class="modal" style="display: none;">
+            <div class="modal-content history-modal">
+                <div class="modal-header">
+                    <h3>테스트 히스토리</h3>
+                    <button class="close-btn" id="closeHistoryModal">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="history-controls">
+                        <div class="search-box">
+                            <input type="text" id="historySearch" placeholder="프롬프트 내용이나 모델명으로 검색...">
+                            <span class="search-icon">🔍</span>
+                        </div>
+                        <div class="history-stats">
+                            <span id="historyCount">총 0개의 테스트</span>
+                            <button id="clearHistory" class="danger-btn small">히스토리 삭제</button>
+                        </div>
+                    </div>
+                    <div id="historyList" class="history-list">
+                        <div class="no-history">테스트 히스토리가 없습니다</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="cancelHistory" class="secondary-btn">닫기</button>
+                </div>
+            </div>
+        </div>
+
         <div class="prompt-section">
             <div class="prompt-header">
                 <label for="promptInput">프롬프트 입력:</label>
@@ -107,6 +201,9 @@
                 <button id="sendPrompt" class="primary-btn">전송 📤</button>
                 <button id="clearPrompt" class="secondary-btn">초기화</button>
                 <button id="stopGeneration" class="danger-btn" style="display: none;">중지 ⏹️</button>
+                <button id="saveTemplate" class="secondary-btn">템플릿 저장 📝</button>
+                <button id="loadTemplate" class="secondary-btn">템플릿 불러오기 📂</button>
+                <button id="historyBtn" class="secondary-btn">히스토리 📊</button>
             </div>
         </div>
 
