@@ -1,0 +1,27 @@
+{
+  "name": "llm-prompt-tester",
+  "version": "1.0.0",
+  "description": "Advanced LLM Prompt Testing Tool with Ollama Integration",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite preview --port 3000"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "lucide": "^0.344.0"
+  },
+  "author": "AI Assistant",
+  "license": "MIT",
+  "keywords": [
+    "llm",
+    "ollama",
+    "prompt",
+    "testing",
+    "ai"
+  ]
+}
