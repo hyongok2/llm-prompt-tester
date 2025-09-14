@@ -273,7 +273,7 @@ header p {
 
 .settings label {
     font-weight: 600;
-    color: #495057;
+    color: var(--text-muted);
 }
 
 .settings input[type="range"] {
@@ -640,8 +640,12 @@ button {
     backdrop-filter: blur(5px);
 }
 
+[data-theme="dark"] .modal {
+    background: rgba(0, 0, 0, 0.8);
+}
+
 .modal-content {
-    background: white;
+    background: var(--bg-container);
     border-radius: 16px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     max-width: 500px;
@@ -649,6 +653,11 @@ button {
     max-height: 80vh;
     overflow: hidden;
     animation: modalSlideIn 0.3s ease;
+    border: 1px solid var(--border-light);
+}
+
+[data-theme="dark"] .modal-content {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes modalSlideIn {
@@ -664,12 +673,12 @@ button {
 
 .modal-header {
     padding: 20px 24px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    border-bottom: 1px solid var(--border-light);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: white;
+    background: var(--bg-header);
+    color: var(--text-white);
 }
 
 .modal-header h3 {
@@ -679,7 +688,7 @@ button {
 
 .close-btn {
     background: none !important;
-    color: white !important;
+    color: var(--text-white) !important;
     border: none !important;
     font-size: 20px !important;
     cursor: pointer;
@@ -702,6 +711,8 @@ button {
     padding: 24px;
     max-height: 400px;
     overflow-y: auto;
+    background: var(--bg-container);
+    color: var(--text-primary);
 }
 
 .setting-group {
@@ -716,40 +727,44 @@ button {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
-    color: #495057;
+    color: var(--text-muted);
 }
 
 .setting-group input[type="text"],
 .setting-group input[type="number"] {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #dee2e6;
+    border: 2px solid var(--border-input);
     border-radius: 8px;
     font-size: 14px;
-    transition: border-color 0.3s;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    transition: all 0.3s;
 }
 
 .setting-group input[type="text"]:focus,
 .setting-group input[type="number"]:focus {
     outline: none;
-    border-color: #4facfe;
+    border-color: #6366f1;
 }
 
 .setting-group input[type="checkbox"] {
     margin-right: 8px;
     transform: scale(1.2);
+    accent-color: #6366f1;
 }
 
 .setting-group small {
     display: block;
     margin-top: 5px;
-    color: #6c757d;
+    color: var(--text-secondary);
     font-size: 12px;
 }
 
 .modal-footer {
     padding: 16px 24px;
-    background: #f8f9fa;
+    background: var(--bg-placeholder);
+    border-top: 1px solid var(--border-light);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -771,9 +786,9 @@ button {
 
 .token-preset {
     padding: 6px 12px !important;
-    background: #e9ecef !important;
-    color: #495057 !important;
-    border: 1px solid #dee2e6 !important;
+    background: var(--bg-placeholder) !important;
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border-input) !important;
     border-radius: 16px !important;
     font-size: 12px !important;
     font-weight: 600 !important;
