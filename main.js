@@ -6,7 +6,8 @@ class ConfigManager {
             temperature: 0.7,
             maxTokens: 32768,
             autoSave: true,
-            filePrefix: 'PromptLab'
+            filePrefix: 'PromptLab',
+            theme: 'dark'
         };
         this.config = this.loadConfig();
     }
@@ -106,6 +107,10 @@ class AdvancedOllamaPromptTester {
         this.saveSessionBtn = document.getElementById('saveSession');
         this.clearResponseBtn = document.getElementById('clearResponse');
 
+        // Theme toggle
+        this.themeToggle = document.getElementById('themeToggle');
+        this.themeIcon = document.querySelector('.theme-icon');
+
         // Stats elements
         this.responseTimeSpan = document.getElementById('responseTime');
         this.tokensPerSecondSpan = document.getElementById('tokensPerSecond');
@@ -167,6 +172,9 @@ class AdvancedOllamaPromptTester {
         this.saveSessionBtn.addEventListener('click', () => this.saveSession());
         this.clearResponseBtn.addEventListener('click', () => this.clearResponse());
 
+        // Theme toggle
+        this.themeToggle.addEventListener('click', () => this.toggleTheme());
+
         // Keyboard shortcuts
         this.promptInput.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
@@ -187,6 +195,9 @@ class AdvancedOllamaPromptTester {
         this.serverUrlInput.value = this.config.get('serverUrl');
         this.temperatureSlider.value = this.config.get('temperature');
         this.tempValue.textContent = this.config.get('temperature');
+
+        // Apply saved theme
+        this.applyTheme(this.config.get('theme'));
 
         this.updateStatus('ready', '준비');
         this.updateCharCount();
@@ -663,6 +674,35 @@ ${session.response}
         document.body.removeChild(link);
 
         URL.revokeObjectURL(url);
+    }
+
+    toggleTheme() {
+        const currentTheme = this.config.get('theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+        this.config.set('theme', newTheme);
+        this.applyTheme(newTheme);
+
+        this.showToast(`${newTheme === 'dark' ? '다크' : '라이트'} 테마로 변경되었습니다`, 'success');
+    }
+
+    applyTheme(theme) {
+        const body = document.body;
+        const isDark = theme === 'dark';
+
+        if (isDark) {
+            body.setAttribute('data-theme', 'dark');
+            this.themeIcon.textContent = '☀️';
+        } else {
+            body.removeAttribute('data-theme');
+            this.themeIcon.textContent = '🌙';
+        }
+
+        // Add smooth transition
+        body.style.transition = 'all 0.3s ease';
+        setTimeout(() => {
+            body.style.transition = '';
+        }, 300);
     }
 
     updateStatus(type, message) {
