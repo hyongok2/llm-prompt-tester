@@ -217,6 +217,7 @@ class AdvancedOllamaPromptTester {
         this.templateHistory = new TemplateHistoryManager();
         this.currentController = null;
         this.startTime = null;
+        this.firstTokenTime = null;
         this.tokenCount = 0;
         this.currentSession = {
             prompt: '',
@@ -301,6 +302,7 @@ class AdvancedOllamaPromptTester {
         this.cancelHistoryBtn = document.getElementById('cancelHistory');
 
         // Stats elements
+        this.firstTokenTimeSpan = document.getElementById('firstTokenTime');
         this.responseTimeSpan = document.getElementById('responseTime');
         this.tokensPerSecondSpan = document.getElementById('tokensPerSecond');
         this.tokenCountSpan = document.getElementById('tokenCount');
@@ -659,6 +661,7 @@ class AdvancedOllamaPromptTester {
 
     startGeneration() {
         this.startTime = Date.now();
+        this.firstTokenTime = null;
         this.tokenCount = 0;
         this.sendBtn.disabled = true;
         this.stopBtn.style.display = 'inline-flex';
@@ -683,6 +686,7 @@ class AdvancedOllamaPromptTester {
         this.responseActions.style.display = 'none';
 
         this.updateStatus('generating', '생성중...');
+        this.firstTokenTimeSpan.textContent = '';
         this.responseTimeSpan.textContent = '';
         this.tokensPerSecondSpan.textContent = '';
     }
@@ -700,7 +704,12 @@ class AdvancedOllamaPromptTester {
         }
 
         const elapsed = this.startTime ? Date.now() - this.startTime : 0;
-        this.responseTimeSpan.textContent = `${elapsed}ms`;
+        const firstTokenElapsed = this.firstTokenTime ? this.firstTokenTime - this.startTime : 0;
+
+        if (firstTokenElapsed > 0) {
+            this.firstTokenTimeSpan.textContent = `첫토큰: ${firstTokenElapsed}ms`;
+        }
+        this.responseTimeSpan.textContent = `총시간: ${elapsed}ms`;
         this.generationTimeSpan.textContent = `${elapsed}ms`;
 
         let tokensPerSecond = 0;
@@ -712,6 +721,7 @@ class AdvancedOllamaPromptTester {
         // Update session metrics
         this.currentSession.response = this.responseContainer.textContent || '';
         this.currentSession.metrics = {
+            firstTokenTime: firstTokenElapsed,
             responseTime: elapsed,
             tokenCount: this.tokenCount,
             tokensPerSecond: tokensPerSecond,
@@ -755,6 +765,11 @@ class AdvancedOllamaPromptTester {
                         const data = JSON.parse(line);
 
                         if (data.response) {
+                            // 첫 토큰 시간 기록
+                            if (!this.firstTokenTime) {
+                                this.firstTokenTime = Date.now();
+                            }
+
                             accumulatedResponse += data.response;
                             this.tokenCount++;
                             this.updateStreamingDisplay(accumulatedResponse);
@@ -819,6 +834,7 @@ class AdvancedOllamaPromptTester {
             this.responseActions.style.display = 'none';
             this.tokenCount = 0;
             this.updateStats();
+            this.firstTokenTimeSpan.textContent = '';
             this.responseTimeSpan.textContent = '';
             this.tokensPerSecondSpan.textContent = '';
             this.generationTimeSpan.textContent = '0ms';
@@ -901,7 +917,8 @@ ${session.response}
 \`\`\`
 
 ## 📊 Performance Metrics
-- **Response Time**: ${session.metrics.responseTime}ms
+- **First Token Time**: ${session.metrics.firstTokenTime}ms
+- **Total Response Time**: ${session.metrics.responseTime}ms
 - **Token Count**: ${session.metrics.tokenCount.toLocaleString()}
 - **Tokens/Second**: ${session.metrics.tokensPerSecond}
 - **Prompt Length**: ${session.metrics.characterCount.toLocaleString()} characters
