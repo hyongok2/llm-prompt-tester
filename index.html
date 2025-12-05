@@ -55,7 +55,15 @@
                     <div class="setting-group">
                         <label for="modalServerUrl">Ollama 서버 URL:</label>
                         <input type="text" id="modalServerUrl" placeholder="http://localhost:11434">
-                        <small>기본값: http://localhost:11434</small>
+                        <small>로컬: http://localhost:11434 | Ollama Cloud: https://ollama.com/api</small>
+                    </div>
+                    <div class="setting-group">
+                        <label for="bearerToken">Bearer Token (선택사항):</label>
+                        <div class="token-input-wrapper">
+                            <input type="password" id="bearerToken" placeholder="Ollama Cloud API 토큰 입력">
+                            <button type="button" id="toggleToken" class="toggle-token-btn" title="토큰 표시/숨김">👁️</button>
+                        </div>
+                        <small>Ollama Cloud를 사용하려면 API 토큰이 필요합니다. 로컬 서버는 비워두세요.</small>
                     </div>
                     <div class="setting-group">
                         <label for="maxTokens">최대 토큰 수:</label>

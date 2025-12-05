@@ -164,7 +164,8 @@ class ConfigManager {
             maxTokens: 32768,
             autoSave: true,
             filePrefix: 'PromptLab',
-            theme: 'dark'
+            theme: 'dark',
+            bearerToken: ''
         };
         this.config = this.loadConfig();
     }
@@ -243,6 +244,8 @@ class AdvancedOllamaPromptTester {
         // Settings modal
         this.settingsModal = document.getElementById('settingsModal');
         this.modalServerUrl = document.getElementById('modalServerUrl');
+        this.bearerTokenInput = document.getElementById('bearerToken');
+        this.toggleTokenBtn = document.getElementById('toggleToken');
         this.maxTokensInput = document.getElementById('maxTokens');
         this.autoSaveCheckbox = document.getElementById('autoSave');
         this.filePrefixInput = document.getElementById('filePrefix');
@@ -323,6 +326,9 @@ class AdvancedOllamaPromptTester {
         this.closeSettingsBtn.addEventListener('click', () => this.closeSettings());
         this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
         this.resetSettingsBtn.addEventListener('click', () => this.resetSettings());
+
+        // Token visibility toggle
+        this.toggleTokenBtn.addEventListener('click', () => this.toggleTokenVisibility());
 
         // Token preset buttons
         document.querySelectorAll('.token-preset').forEach(btn => {
@@ -445,6 +451,22 @@ class AdvancedOllamaPromptTester {
         this.updateCharCount();
     }
 
+    // Helper method to get proxy-aware URL
+    getProxiedUrl(endpoint) {
+        const serverUrl = this.config.get('serverUrl');
+
+        // Check if using Ollama Cloud
+        if (serverUrl.includes('ollama.com')) {
+            // In development (localhost), use proxy to avoid CORS
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return `/ollama-cloud${endpoint}`;
+            }
+        }
+
+        // For local Ollama or production, use direct URL
+        return `${serverUrl}${endpoint}`;
+    }
+
     async testConnection() {
         const originalText = this.testConnectionBtn.textContent;
         const originalStatus = this.statusSpan.textContent;
@@ -454,8 +476,15 @@ class AdvancedOllamaPromptTester {
         this.updateStatus('generating', '연결 테스트중...');
 
         try {
-            const response = await fetch(`${this.config.get('serverUrl')}/api/tags`, {
+            const headers = {};
+            const bearerToken = this.config.get('bearerToken');
+            if (bearerToken) {
+                headers['Authorization'] = `Bearer ${bearerToken}`;
+            }
+
+            const response = await fetch(this.getProxiedUrl('/api/tags'), {
                 method: 'GET',
+                headers: headers,
                 timeout: 5000
             });
 
@@ -482,6 +511,7 @@ class AdvancedOllamaPromptTester {
 
     openSettings() {
         this.modalServerUrl.value = this.config.get('serverUrl');
+        this.bearerTokenInput.value = this.config.get('bearerToken') || '';
         this.maxTokensInput.value = this.config.get('maxTokens');
         this.autoSaveCheckbox.checked = this.config.get('autoSave');
         this.filePrefixInput.value = this.config.get('filePrefix');
@@ -502,9 +532,25 @@ class AdvancedOllamaPromptTester {
         this.settingsModal.style.display = 'none';
     }
 
+    toggleTokenVisibility() {
+        const input = this.bearerTokenInput;
+        const btn = this.toggleTokenBtn;
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.textContent = '🙈';
+            btn.title = '토큰 숨김';
+        } else {
+            input.type = 'password';
+            btn.textContent = '👁️';
+            btn.title = '토큰 표시';
+        }
+    }
+
     saveSettings() {
         const newConfig = {
             serverUrl: this.modalServerUrl.value.trim(),
+            bearerToken: this.bearerTokenInput.value.trim(),
             maxTokens: parseInt(this.maxTokensInput.value),
             autoSave: this.autoSaveCheckbox.checked,
             filePrefix: this.filePrefixInput.value.trim() || 'PromptLab'
@@ -563,7 +609,15 @@ class AdvancedOllamaPromptTester {
         this.modelSelect.innerHTML = '<option value="">로딩중...</option>';
 
         try {
-            const response = await fetch(`${this.config.get('serverUrl')}/api/tags`);
+            const headers = {};
+            const bearerToken = this.config.get('bearerToken');
+            if (bearerToken) {
+                headers['Authorization'] = `Bearer ${bearerToken}`;
+            }
+
+            const response = await fetch(this.getProxiedUrl('/api/tags'), {
+                headers: headers
+            });
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -631,11 +685,19 @@ class AdvancedOllamaPromptTester {
                 requestBody.options = { num_predict: maxTokens };
             }
 
-            const response = await fetch(`${this.config.get('serverUrl')}/api/generate`, {
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+
+            // Add Bearer token if configured
+            const bearerToken = this.config.get('bearerToken');
+            if (bearerToken) {
+                headers['Authorization'] = `Bearer ${bearerToken}`;
+            }
+
+            const response = await fetch(this.getProxiedUrl('/api/generate'), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: headers,
                 body: JSON.stringify(requestBody),
                 signal: controller.signal
             });

@@ -97,9 +97,39 @@ npm run serve
 | Setting | Description | Default | Range |
 |---------|-------------|---------|-------|
 | Server URL | Ollama server endpoint | `http://localhost:11434` | Any valid URL |
+| Bearer Token | API authentication token | `` (empty) | Any valid token |
 | Temperature | Response creativity | `0.7` | 0-2.0 |
 | Max Tokens | Maximum response length | `32,768` | 100-131,072 |
 | Auto-save | Automatic settings persistence | `true` | true/false |
+
+### 🌐 Ollama Cloud Usage
+
+To use Ollama Cloud instead of local installation:
+
+1. **Get API Key**: Create an API key at [ollama.com](https://ollama.com/settings/keys)
+2. **Run Development Server**: `npm run dev` (required to avoid CORS issues)
+3. **Configure in App**:
+   - Server URL: `https://ollama.com/api`
+   - Bearer Token: Paste your API key
+4. **Test Connection**: Click the 🔗 button to verify
+
+**Important Notes:**
+- ⚠️ **Development mode required**: Use `npm run dev` to enable the proxy server
+- The proxy automatically routes requests through `localhost:3000` to avoid CORS errors
+- Direct file opening (`file://`) won't work due to browser CORS restrictions
+
+**Example Configuration:**
+- Server URL: `https://ollama.com/api`
+- Bearer Token: `your-api-key-here`
+- Models: Access cloud models like `gpt-oss:120b`, `deepseek-v3.1:671b`, `kimi-k2:1t`
+
+**Available Cloud Models:**
+- `cogito-2.1:671b` - 671B parameter model
+- `kimi-k2:1t` - 1T parameter model
+- `deepseek-v3.1:671b` - DeepSeek V3.1
+- `mistral-large-3:675b` - Mistral Large 3
+- `gpt-oss:120b` - GPT-OSS 120B
+- `qwen3-coder:480b` - Qwen 3 Coder
 
 ### 🧠 Large Context Model Support
 

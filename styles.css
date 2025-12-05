@@ -753,7 +753,8 @@ button {
 }
 
 .setting-group input[type="text"],
-.setting-group input[type="number"] {
+.setting-group input[type="number"],
+.setting-group input[type="password"] {
     width: 100%;
     padding: 10px 12px;
     border: 2px solid var(--border-input);
@@ -765,7 +766,8 @@ button {
 }
 
 .setting-group input[type="text"]:focus,
-.setting-group input[type="number"]:focus {
+.setting-group input[type="number"]:focus,
+.setting-group input[type="password"]:focus {
     outline: none;
     border-color: #6366f1;
 }
@@ -828,6 +830,42 @@ button {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+/* Token input wrapper with visibility toggle */
+.token-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.token-input-wrapper input {
+    flex: 1;
+}
+
+.toggle-token-btn {
+    padding: 10px 16px;
+    background: var(--bg-input);
+    border: 2px solid var(--border-input);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+}
+
+.toggle-token-btn:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-color: #6366f1;
+    transform: scale(1.05);
+}
+
+.toggle-token-btn:active {
+    transform: scale(0.95);
 }
 
 .token-presets {
