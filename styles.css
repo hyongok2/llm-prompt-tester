@@ -154,67 +154,96 @@ header p {
 
 .config-panel {
     background: var(--bg-config);
-    padding: 28px 30px;
+    padding: 24px 30px;
     border-bottom: 1px solid var(--border-light);
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    align-items: center;
-    gap: 20px;
-}
-
-.server-config {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
-.server-config label {
-    font-weight: 600;
-    color: var(--text-muted);
-    white-space: nowrap;
+.provider-selector {
+    display: flex;
 }
 
-.server-config input {
-    flex: 1;
-    padding: 8px 12px;
+.provider-selector select {
+    padding: 10px 14px;
     border: 2px solid var(--border-input);
     border-radius: 8px;
     font-size: 14px;
     background: var(--bg-input);
     color: var(--text-primary);
     transition: all 0.3s;
-    min-width: 200px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 110px;
 }
 
-.server-config input:focus {
+.provider-selector select:focus {
     outline: none;
     border-color: #6366f1;
 }
 
-.server-config button {
-    padding: 8px 12px;
+.provider-selector select:hover {
+    border-color: #8b5cf6;
+}
+
+.server-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 250px;
+}
+
+.server-info input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 2px solid var(--border-input);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    transition: all 0.3s;
+}
+
+.server-info input:focus {
+    outline: none;
+    border-color: #6366f1;
+}
+
+.server-info button {
+    padding: 10px 14px;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     color: white;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s;
-    font-size: 14px;
+    font-size: 16px;
     box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    min-width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.server-config button:hover {
+.server-info button:hover {
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
-.settings-toggle {
+.settings-btn {
     background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
     box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3) !important;
+    padding: 10px 14px !important;
+    min-width: 44px !important;
+    height: 44px !important;
 }
 
-.settings-toggle:hover {
+.settings-btn:hover {
     background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
     box-shadow: 0 4px 16px rgba(100, 116, 139, 0.4) !important;
 }
@@ -222,19 +251,14 @@ header p {
 .model-selector {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex: 1;
-    min-width: 300px;
-}
-
-.model-selector label {
-    font-weight: 600;
-    color: var(--text-muted);
+    min-width: 280px;
 }
 
 .model-selector select {
     flex: 1;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border: 2px solid var(--border-input);
     border-radius: 8px;
     font-size: 14px;
@@ -249,7 +273,7 @@ header p {
 }
 
 .model-selector button {
-    padding: 8px 12px;
+    padding: 10px 14px;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     color: white;
     border: none;
@@ -257,6 +281,12 @@ header p {
     cursor: pointer;
     transition: all 0.3s;
     box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    font-size: 16px;
+    min-width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .model-selector button:hover {
@@ -265,20 +295,49 @@ header p {
     box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
-.settings {
+.model-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 280px;
+}
+
+.model-input input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 2px solid var(--border-input);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    transition: all 0.3s;
+}
+
+.model-input input:focus {
+    outline: none;
+    border-color: #6366f1;
+}
+
+.model-input input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.temp-control {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.settings label {
+.temp-control label {
     font-weight: 600;
     color: var(--text-muted);
+    font-size: 13px;
 }
 
-.settings input[type="range"] {
-    width: 120px;
-    margin: 0 5px;
+.temp-control input[type="range"] {
+    width: 100px;
 }
 
 #tempValue {
@@ -288,7 +347,7 @@ header p {
     border-radius: 8px;
     font-size: 12px;
     font-weight: 600;
-    min-width: 35px;
+    min-width: 38px;
     text-align: center;
     box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
@@ -549,24 +608,26 @@ button {
     }
 
     .config-panel {
-        grid-template-columns: 1fr;
-        gap: 15px;
+        padding: 20px;
+        gap: 12px;
     }
 
-    .server-config,
-    .model-selector {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
+    .provider-selector,
+    .server-info,
+    .model-selector,
+    .model-input,
+    .temp-control {
+        min-width: 100%;
     }
 
-    .server-config input,
-    .model-selector select {
+    .server-info input,
+    .model-selector select,
+    .model-input input {
         min-width: auto;
     }
 
-    .model-selector {
-        min-width: auto;
+    .temp-control {
+        justify-content: space-between;
     }
 
     .prompt-section, .response-section {

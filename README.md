@@ -1,11 +1,17 @@
 # 🤖 LLM Prompt Tester
 
-Advanced Ollama-based prompt testing tool with modern UI and comprehensive features.
+Advanced LLM prompt testing tool supporting both Ollama and vLLM with modern UI and comprehensive features.
 
 ## ✨ Features
 
+### 🔀 Multi-Provider Support
+- **Ollama Integration** - Full support for Ollama API (local and cloud)
+- **vLLM Integration** - Native vLLM OpenAI-compatible API support
+- **Easy Provider Switching** - Toggle between providers with a single click
+- **Provider-Specific Configuration** - Separate settings for each provider
+
 ### 🔧 Configuration Management
-- **Configurable Ollama Server URL** - Connect to any Ollama instance
+- **Configurable Server URLs** - Connect to any Ollama or vLLM instance
 - **Settings Persistence** - All preferences saved to localStorage
 - **Connection Testing** - Test connection before usage
 - **Auto-save Settings** - Automatic configuration backup
@@ -109,6 +115,7 @@ To use Ollama Cloud instead of local installation:
 1. **Get API Key**: Create an API key at [ollama.com](https://ollama.com/settings/keys)
 2. **Run Development Server**: `npm run dev` (required to avoid CORS issues)
 3. **Configure in App**:
+   - Provider: Select **Ollama**
    - Server URL: `https://ollama.com/api`
    - Bearer Token: Paste your API key
 4. **Test Connection**: Click the 🔗 button to verify
@@ -119,6 +126,7 @@ To use Ollama Cloud instead of local installation:
 - Direct file opening (`file://`) won't work due to browser CORS restrictions
 
 **Example Configuration:**
+- Provider: **Ollama**
 - Server URL: `https://ollama.com/api`
 - Bearer Token: `your-api-key-here`
 - Models: Access cloud models like `gpt-oss:120b`, `deepseek-v3.1:671b`, `kimi-k2:1t`
@@ -130,6 +138,47 @@ To use Ollama Cloud instead of local installation:
 - `mistral-large-3:675b` - Mistral Large 3
 - `gpt-oss:120b` - GPT-OSS 120B
 - `qwen3-coder:480b` - Qwen 3 Coder
+
+### 🚀 vLLM Usage
+
+To use vLLM (local deployment):
+
+1. **Start vLLM Server**: Launch your vLLM instance with a model
+   ```bash
+   # Example: Run vLLM with Llama-2-7b
+   python -m vllm.entrypoints.openai.api_server \
+     --model meta-llama/Llama-2-7b-hf \
+     --host 0.0.0.0 \
+     --port 8000
+   ```
+
+2. **Configure in App**:
+   - Provider: Select **vLLM**
+   - Server URL: `http://localhost:8000` (or your vLLM server address)
+   - Model Name: Enter the exact model name (e.g., `meta-llama/Llama-2-7b-hf`)
+
+3. **Test Connection**: Click the 🔗 button to verify
+
+**Key Differences from Ollama:**
+- **Single Model**: vLLM runs one model per server instance
+- **No Model List**: Enter model name manually (no dropdown)
+- **No Authentication**: Local vLLM doesn't require bearer tokens
+- **OpenAI API**: Uses OpenAI-compatible `/v1/completions` endpoint
+
+**Example Configuration:**
+- Provider: **vLLM**
+- Server URL: `http://localhost:8000`
+- Model Name: `meta-llama/Llama-2-7b-hf`
+- Temperature: `0.7`
+- Max Tokens: `2048-32768`
+
+**Supported Models:**
+Any model supported by vLLM, including:
+- Meta Llama series (`meta-llama/Llama-2-*`, `meta-llama/Llama-3-*`)
+- Mistral models (`mistralai/Mistral-7B-*`)
+- Yi models (`01-ai/Yi-*`)
+- DeepSeek models (`deepseek-ai/deepseek-*`)
+- And many more from HuggingFace
 
 ### 🧠 Large Context Model Support
 

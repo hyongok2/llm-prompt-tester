@@ -1,3 +1,108 @@
+// API Provider Classes
+class VLLMProvider {
+    constructor(config) {
+        this.baseUrl = config.vllmServerUrl || 'http://localhost:8000';
+        this.modelName = config.vllmModelName || '';
+    }
+
+    async testConnection() {
+        try {
+            const response = await fetch(`${this.baseUrl}/v1/models`, {
+                method: 'GET',
+                timeout: 5000
+            });
+            return response.ok;
+        } catch (error) {
+            console.error('vLLM connection test failed:', error);
+            return false;
+        }
+    }
+
+    async generateStream(prompt, params, onChunk, onComplete, onError) {
+        try {
+            // vLLM은 --max-num-batched-tokens 설정에 따라 제한됨
+            // 서버 설정에 맞춰 max_tokens 조정
+            // 서버 설정: --max-num-batched-tokens 4096 (권장)
+            const maxTokens = Math.min(params.max_tokens || 4096, 4096);
+
+            const requestBody = {
+                model: this.modelName,
+                prompt: prompt,
+                temperature: params.temperature || 0.7,
+                max_tokens: maxTokens,
+                stream: true
+            };
+
+            console.log('vLLM Request:', requestBody);
+
+            const response = await fetch(`${this.baseUrl}/v1/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody),
+                signal: params.signal
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('vLLM Error Response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            await this.handleSSEStream(response, onChunk, onComplete);
+        } catch (error) {
+            if (onError) onError(error);
+            throw error;
+        }
+    }
+
+    async handleSSEStream(response, onChunk, onComplete) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6).trim();
+
+                        if (data === '[DONE]') {
+                            if (onComplete) onComplete();
+                            return;
+                        }
+
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.choices && parsed.choices[0] && parsed.choices[0].text) {
+                                const text = parsed.choices[0].text;
+
+                                // Display all tokens without filtering
+                                // (Reasoning token filtering disabled for debugging)
+                                if (text && onChunk) onChunk(text);
+                            }
+                        } catch (parseError) {
+                            console.warn('Failed to parse SSE data:', parseError);
+                        }
+                    }
+                }
+            }
+
+            if (onComplete) onComplete();
+        } finally {
+            reader.releaseLock();
+        }
+    }
+}
+
 // Template and History Manager
 class TemplateHistoryManager {
     constructor() {
@@ -159,7 +264,10 @@ class TemplateHistoryManager {
 class ConfigManager {
     constructor() {
         this.defaultConfig = {
+            provider: 'ollama', // 'ollama' | 'vllm'
             serverUrl: 'http://localhost:11434',
+            vllmServerUrl: 'http://localhost:8000',
+            vllmModelName: '',
             temperature: 0.7,
             maxTokens: 32768,
             autoSave: true,
@@ -236,6 +344,13 @@ class AdvancedOllamaPromptTester {
     }
 
     initializeElements() {
+        // Provider selection
+        this.providerSelect = document.getElementById('providerSelect');
+        this.serverUrlLabel = document.getElementById('serverUrlLabel');
+        this.ollamaModelSelector = document.getElementById('ollamaModelSelector');
+        this.vllmModelInput = document.getElementById('vllmModelInput');
+        this.vllmModelNameInput = document.getElementById('vllmModelName');
+
         // Server configuration
         this.serverUrlInput = document.getElementById('serverUrl');
         this.testConnectionBtn = document.getElementById('testConnection');
@@ -314,9 +429,24 @@ class AdvancedOllamaPromptTester {
     }
 
     bindEvents() {
+        // Provider selection
+        this.providerSelect.addEventListener('change', (e) => {
+            this.switchProvider(e.target.value);
+        });
+
+        // vLLM model name input
+        this.vllmModelNameInput.addEventListener('input', (e) => {
+            this.config.set('vllmModelName', e.target.value);
+        });
+
         // Server configuration
         this.serverUrlInput.addEventListener('input', (e) => {
-            this.config.set('serverUrl', e.target.value);
+            const provider = this.config.get('provider');
+            if (provider === 'ollama') {
+                this.config.set('serverUrl', e.target.value);
+            } else {
+                this.config.set('vllmServerUrl', e.target.value);
+            }
         });
 
         this.testConnectionBtn.addEventListener('click', () => this.testConnection());
@@ -440,15 +570,53 @@ class AdvancedOllamaPromptTester {
     }
 
     loadSettings() {
-        this.serverUrlInput.value = this.config.get('serverUrl');
+        // Load provider setting
+        const provider = this.config.get('provider');
+        this.providerSelect.value = provider;
+
+        // Load provider-specific settings
+        if (provider === 'vllm') {
+            this.serverUrlInput.value = this.config.get('vllmServerUrl');
+            this.vllmModelNameInput.value = this.config.get('vllmModelName');
+        } else {
+            this.serverUrlInput.value = this.config.get('serverUrl');
+        }
+
         this.temperatureSlider.value = this.config.get('temperature');
         this.tempValue.textContent = this.config.get('temperature');
 
         // Apply saved theme
         this.applyTheme(this.config.get('theme'));
 
+        // Switch UI to match provider
+        this.switchProvider(provider, false);
+
         this.updateStatus('ready', '준비');
         this.updateCharCount();
+    }
+
+    switchProvider(provider, loadModels = true) {
+        this.config.set('provider', provider);
+
+        if (provider === 'vllm') {
+            // Switch to vLLM mode
+            this.ollamaModelSelector.style.display = 'none';
+            this.vllmModelInput.style.display = 'flex';
+            this.serverUrlLabel.textContent = 'vLLM 서버:';
+            this.serverUrlInput.value = this.config.get('vllmServerUrl');
+            this.serverUrlInput.placeholder = 'http://localhost:8000';
+        } else {
+            // Switch to Ollama mode
+            this.ollamaModelSelector.style.display = 'flex';
+            this.vllmModelInput.style.display = 'none';
+            this.serverUrlLabel.textContent = 'Ollama 서버:';
+            this.serverUrlInput.value = this.config.get('serverUrl');
+            this.serverUrlInput.placeholder = 'http://localhost:11434';
+
+            if (loadModels) {
+                this.loadModels();
+            }
+        }
     }
 
     // Helper method to get proxy-aware URL
@@ -470,30 +638,45 @@ class AdvancedOllamaPromptTester {
     async testConnection() {
         const originalText = this.testConnectionBtn.textContent;
         const originalStatus = this.statusSpan.textContent;
+        const provider = this.config.get('provider');
 
         this.testConnectionBtn.textContent = '테스트중...';
         this.testConnectionBtn.disabled = true;
         this.updateStatus('generating', '연결 테스트중...');
 
         try {
-            const headers = {};
-            const bearerToken = this.config.get('bearerToken');
-            if (bearerToken) {
-                headers['Authorization'] = `Bearer ${bearerToken}`;
-            }
+            if (provider === 'vllm') {
+                // Test vLLM connection
+                const vllmProvider = new VLLMProvider(this.config.config);
+                const success = await vllmProvider.testConnection();
 
-            const response = await fetch(this.getProxiedUrl('/api/tags'), {
-                method: 'GET',
-                headers: headers,
-                timeout: 5000
-            });
-
-            if (response.ok) {
-                this.updateStatus('complete', '연결 성공');
-                this.showToast('Ollama 서버 연결 성공!', 'success');
-                this.loadModels(); // Refresh models on successful connection
+                if (success) {
+                    this.updateStatus('complete', '연결 성공');
+                    this.showToast('vLLM 서버 연결 성공!', 'success');
+                } else {
+                    throw new Error('vLLM 서버에 연결할 수 없습니다');
+                }
             } else {
-                throw new Error(`HTTP ${response.status}`);
+                // Test Ollama connection
+                const headers = {};
+                const bearerToken = this.config.get('bearerToken');
+                if (bearerToken) {
+                    headers['Authorization'] = `Bearer ${bearerToken}`;
+                }
+
+                const response = await fetch(this.getProxiedUrl('/api/tags'), {
+                    method: 'GET',
+                    headers: headers,
+                    timeout: 5000
+                });
+
+                if (response.ok) {
+                    this.updateStatus('complete', '연결 성공');
+                    this.showToast('Ollama 서버 연결 성공!', 'success');
+                    this.loadModels(); // Refresh models on successful connection
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
             }
         } catch (error) {
             this.updateStatus('error', '연결 실패');
@@ -654,16 +837,26 @@ class AdvancedOllamaPromptTester {
 
     async sendPrompt() {
         const prompt = this.promptInput.value.trim();
-        const model = this.modelSelect.value;
+        const provider = this.config.get('provider');
 
         if (!prompt) {
             this.showToast('프롬프트를 입력해주세요', 'warning');
             return;
         }
 
-        if (!model) {
-            this.showToast('모델을 선택해주세요', 'warning');
-            return;
+        // Validate model selection based on provider
+        if (provider === 'vllm') {
+            const modelName = this.config.get('vllmModelName');
+            if (!modelName) {
+                this.showToast('vLLM 모델 이름을 입력해주세요', 'warning');
+                return;
+            }
+        } else {
+            const model = this.modelSelect.value;
+            if (!model) {
+                this.showToast('모델을 선택해주세요', 'warning');
+                return;
+            }
         }
 
         this.startGeneration();
@@ -672,41 +865,13 @@ class AdvancedOllamaPromptTester {
             const controller = new AbortController();
             this.currentController = controller;
 
-            const requestBody = {
-                model: model,
-                prompt: prompt,
-                temperature: this.config.get('temperature'),
-                stream: true
-            };
-
-            // Add max_tokens if configured
-            const maxTokens = this.config.get('maxTokens');
-            if (maxTokens && maxTokens > 0) {
-                requestBody.options = { num_predict: maxTokens };
+            if (provider === 'vllm') {
+                // Use vLLM provider
+                await this.sendVLLMPrompt(prompt, controller);
+            } else {
+                // Use Ollama provider
+                await this.sendOllamaPrompt(prompt, controller);
             }
-
-            const headers = {
-                'Content-Type': 'application/json',
-            };
-
-            // Add Bearer token if configured
-            const bearerToken = this.config.get('bearerToken');
-            if (bearerToken) {
-                headers['Authorization'] = `Bearer ${bearerToken}`;
-            }
-
-            const response = await fetch(this.getProxiedUrl('/api/generate'), {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(requestBody),
-                signal: controller.signal
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            await this.handleStreamResponse(response);
 
         } catch (error) {
             if (error.name === 'AbortError') {
@@ -721,6 +886,77 @@ class AdvancedOllamaPromptTester {
         }
     }
 
+    async sendOllamaPrompt(prompt, controller) {
+        const model = this.modelSelect.value;
+        const requestBody = {
+            model: model,
+            prompt: prompt,
+            temperature: this.config.get('temperature'),
+            stream: true
+        };
+
+        // Add max_tokens if configured
+        const maxTokens = this.config.get('maxTokens');
+        if (maxTokens && maxTokens > 0) {
+            requestBody.options = { num_predict: maxTokens };
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        // Add Bearer token if configured
+        const bearerToken = this.config.get('bearerToken');
+        if (bearerToken) {
+            headers['Authorization'] = `Bearer ${bearerToken}`;
+        }
+
+        const response = await fetch(this.getProxiedUrl('/api/generate'), {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        await this.handleStreamResponse(response);
+    }
+
+    async sendVLLMPrompt(prompt, controller) {
+        const vllmProvider = new VLLMProvider(this.config.config);
+        let accumulatedResponse = '';
+
+        await vllmProvider.generateStream(
+            prompt,
+            {
+                temperature: this.config.get('temperature'),
+                max_tokens: this.config.get('maxTokens'),
+                signal: controller.signal
+            },
+            (text) => {
+                // onChunk callback
+                if (!this.firstTokenTime) {
+                    this.firstTokenTime = Date.now();
+                }
+                accumulatedResponse += text;
+                this.tokenCount++;
+                this.updateStreamingDisplay(accumulatedResponse);
+                this.updateStats();
+            },
+            () => {
+                // onComplete callback
+                // Stream completed successfully
+            },
+            (error) => {
+                // onError callback
+                throw error;
+            }
+        );
+    }
+
     startGeneration() {
         this.startTime = Date.now();
         this.firstTokenTime = null;
@@ -729,13 +965,23 @@ class AdvancedOllamaPromptTester {
         this.stopBtn.style.display = 'inline-flex';
         this.sendBtn.style.display = 'none';
 
+        const provider = this.config.get('provider');
+        const model = provider === 'vllm'
+            ? this.config.get('vllmModelName')
+            : this.modelSelect.value;
+
+        const serverUrl = provider === 'vllm'
+            ? this.config.get('vllmServerUrl')
+            : this.config.get('serverUrl');
+
         // Initialize current session
         this.currentSession = {
             prompt: this.promptInput.value.trim(),
             response: '',
-            model: this.modelSelect.value,
+            model: model,
+            provider: provider,
             settings: {
-                serverUrl: this.config.get('serverUrl'),
+                serverUrl: serverUrl,
                 temperature: this.config.get('temperature'),
                 maxTokens: this.config.get('maxTokens')
             },
