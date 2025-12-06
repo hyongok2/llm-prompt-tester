@@ -27,7 +27,9 @@ class VLLMProvider {
 
             const requestBody = {
                 model: this.modelName,
-                prompt: prompt,
+                messages: [
+                    { role: "user", content: prompt }
+                ],
                 temperature: params.temperature || 0.7,
                 max_tokens: maxTokens,
                 stream: true
@@ -35,7 +37,7 @@ class VLLMProvider {
 
             console.log('vLLM Request:', requestBody);
 
-            const response = await fetch(`${this.baseUrl}/v1/completions`, {
+            const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -82,12 +84,16 @@ class VLLMProvider {
 
                         try {
                             const parsed = JSON.parse(data);
-                            if (parsed.choices && parsed.choices[0] && parsed.choices[0].text) {
-                                const text = parsed.choices[0].text;
+                            if (parsed.choices && parsed.choices[0]) {
+                                // chat/completions uses delta.content instead of text
+                                const delta = parsed.choices[0].delta;
+                                if (delta && delta.content) {
+                                    const text = delta.content;
 
-                                // Display all tokens without filtering
-                                // (Reasoning token filtering disabled for debugging)
-                                if (text && onChunk) onChunk(text);
+                                    // Display all tokens without filtering
+                                    // (Reasoning token filtering disabled for debugging)
+                                    if (text && onChunk) onChunk(text);
+                                }
                             }
                         } catch (parseError) {
                             console.warn('Failed to parse SSE data:', parseError);
